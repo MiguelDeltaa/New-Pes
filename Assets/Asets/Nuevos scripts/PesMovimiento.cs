@@ -3,13 +3,13 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class PesMovimiento : MonoBehaviour
 {
-    public Transform cam;                 // Arrastra aqui la Main Camera
-    public Vector3 rotacionModelo;        // Rotacion con la que el pez se ve acostado
-    public float moveForce = 25f;         // Aceleracion (baja = mas resbaloso/bobo)
+    public Transform cam;
+    public Vector3 rotacionModelo;  
+    public float moveForce = 25f;    
     public float maxSpeed = 4f;
     public float jumpForce = 7f;
-    public float flopForce = 3f;          // Fuerza de los "coletazos" al avanzar
-    public float flopInterval = 0.4f;     // Tiempo entre coletazos
+    public float flopForce = 3f; 
+    public float flopInterval = 0.4f; 
     public float turnSpeed = 5f;
     public float groundCheckDistance = 0.6f;
 
@@ -31,7 +31,7 @@ public class PesMovimiento : MonoBehaviour
 
     void Update()
     {
-        // Direccion relativa a la camara
+        //direcion en la q se mueve la camara
         Vector3 fwd = Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized;
         Vector3 right = Vector3.ProjectOnPlane(cam.right, Vector3.up).normalized;
         input = fwd * Input.GetAxisRaw("Vertical") + right * Input.GetAxisRaw("Horizontal");
@@ -44,10 +44,9 @@ public class PesMovimiento : MonoBehaviour
     {
         bool grounded = Grounded();
 
-        // Moverse (con fuerza, por eso se siente resbaloso)
+        // movimientooo
         rb.AddForce(input * moveForce, ForceMode.Acceleration);
 
-        // Limitar velocidad horizontal
         Vector3 flat = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);
         if (flat.magnitude > maxSpeed)
         {
@@ -55,7 +54,7 @@ public class PesMovimiento : MonoBehaviour
             rb.linearVelocity = new Vector3(flat.x, rb.linearVelocity.y, flat.z);
         }
 
-        // Rebotitos tipo pez fuera del agua
+        // rebotes
         if (grounded && input.sqrMagnitude > 0.01f)
         {
             flopTimer += Time.fixedDeltaTime;
@@ -66,12 +65,12 @@ public class PesMovimiento : MonoBehaviour
             }
         }
 
-        // Saltar
+        // salta
         if (jumpPressed && grounded)
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
         jumpPressed = false;
 
-        // Girar hacia donde se mueve (conservando la rotacion del modelo)
+        // gira
         if (input.sqrMagnitude > 0.01f)
         {
             Quaternion target = Quaternion.LookRotation(input) * Quaternion.Euler(rotacionModelo);
