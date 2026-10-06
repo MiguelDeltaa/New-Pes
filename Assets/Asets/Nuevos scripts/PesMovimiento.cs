@@ -1,6 +1,4 @@
 using UnityEngine;
-
-[RequireComponent(typeof(Rigidbody))]
 public class PesMovimiento : MonoBehaviour
 {
     public Transform cam;

@@ -2372,7 +2372,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2075117728}
         m_TargetAssemblyTypeName: Mnu, Assembly-CSharp
-        m_MethodName: cambio2
+        m_MethodName: cambio
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
