@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 public class PesMovimiento : MonoBehaviour
 {
     public Transform cam;
@@ -15,6 +16,11 @@ public class PesMovimiento : MonoBehaviour
     Vector3 input;
     float flopTimer;
     bool jumpPressed;
+
+    public float o2 = 100f;
+    public float o2Bleed = 2f;
+    public float o2Recov = 5f;
+    bool wet = false;
 
     void Awake()
     {
@@ -73,6 +79,52 @@ public class PesMovimiento : MonoBehaviour
         {
             Quaternion target = Quaternion.LookRotation(input) * Quaternion.Euler(rotacionModelo);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, turnSpeed * Time.fixedDeltaTime);
+        }
+
+
+        
+        if (o2>=100) { o2 = 100;}
+        if (wet == false)
+        {
+            o2 -= o2Bleed * Time.deltaTime;
+        }
+        else
+        {
+            o2 += o2Recov * Time.deltaTime;
+        }
+        if (o2<=0)
+        {
+            print("muelto");
+        }
+    }
+    //peligros
+    private void OnTriggerEnter(Collider collision)
+    {
+                                                           
+        if (collision.gameObject.CompareTag("peligro"))
+        {
+
+            //Destroy(gameObject);
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            print("xd");
+
+        }
+        if (collision.gameObject.CompareTag("awa"))     //O2
+        {
+            wet = true;
+            print("ahua");  
+            //o2 += o2Recov*Time.deltaTime;
+        }
+
+    }
+
+    void OnTriggerExit(Collider collision)
+    {
+        if (collision.gameObject.CompareTag("awa"))
+        {
+            print("aire");
+            wet = false;
+            //o2 -= o2Bleed * Time.deltaTime;
         }
     }
 }
