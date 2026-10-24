@@ -25,5 +25,10 @@ public void cambio2()
     SceneManager.LoadScene(1);
 
 }
+    public void nivel2()
+    {
+        SceneManager.LoadScene(2);
+
+    }
 }
 

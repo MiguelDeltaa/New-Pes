@@ -1,26 +1,32 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TMPro;
+
 public class PesMovimiento : MonoBehaviour
 {
     public Transform cam;
-    public Vector3 rotacionModelo;  
-    public float moveForce = 25f;    
+    public Vector3 rotacionModelo;
+    public float moveForce = 25f;
     public float maxSpeed = 4f;
     public float jumpForce = 7f;
-    public float flopForce = 3f; 
-    public float flopInterval = 0.4f; 
+    public float flopForce = 3f;
+    public float flopInterval = 0.4f;
     public float turnSpeed = 5f;
-    public float groundCheckDistance = 0.6f;
 
     Rigidbody rb;
     Vector3 input;
     float flopTimer;
     bool jumpPressed;
+    bool grounded;   
 
     public float o2 = 100f;
     public float o2Bleed = 2f;
     public float o2Recov = 5f;
+    public TMP_Text o2Texto;          
+    public GameObject pantallaGameOver; 
+    public Camara camara;               
     bool wet = false;
+    bool muerto = false;
 
     void Awake()
     {
@@ -28,9 +34,11 @@ public class PesMovimiento : MonoBehaviour
         //rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
     }
 
-    bool Grounded()
+    // Suelo = cualquier cosa que toque al pez por debajo (la normal del contacto apunta hacia arriba)
+    void OnCollisionStay(Collision c)
     {
-        return Physics.Raycast(transform.position, Vector3.down, groundCheckDistance);
+        foreach (var p in c.contacts)
+            if (p.normal.y > 0.5f) grounded = true;
     }
 
     void Update()
@@ -46,7 +54,7 @@ public class PesMovimiento : MonoBehaviour
 
     void FixedUpdate()
     {
-        bool grounded = Grounded();
+        if (muerto) return;   // no se mueve ni gasta oxigeno
 
         // movimientooo
         rb.AddForce(input * moveForce, ForceMode.Acceleration);
@@ -81,38 +89,48 @@ public class PesMovimiento : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, target, turnSpeed * Time.fixedDeltaTime);
         }
 
+        // oxigeno
+        if (wet) o2 += o2Recov * Time.deltaTime;
+        else o2 -= o2Bleed * Time.deltaTime;
 
-        
-        if (o2>=100) { o2 = 100;}
-        if (wet == false)
-        {
-            o2 -= o2Bleed * Time.deltaTime;
-        }
-        else
-        {
-            o2 += o2Recov * Time.deltaTime;
-        }
-        if (o2<=0)
-        {
-            print("muelto");
-        }
+        o2 = Mathf.Clamp(o2, 0f, 100f);
+
+        if (o2Texto != null) o2Texto.text = "O2: " + Mathf.CeilToInt(o2);
+
+        if (o2 <= 0) GameOver();
+
+        grounded = false;   
     }
+
+    void GameOver()
+    {
+        if (muerto) return;  
+        muerto = true;
+        pantallaGameOver.SetActive(true);
+        if (camara != null) camara.enabled = false;
+        Cursor.lockState = CursorLockMode.None;  
+    }
+
+    // Reintentar
+    public void Reiniciar()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
     //peligros
     private void OnTriggerEnter(Collider collision)
     {
-                                                           
+
         if (collision.gameObject.CompareTag("peligro"))
         {
 
-            //Destroy(gameObject);
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-            print("xd");
+            GameOver();
 
         }
         if (collision.gameObject.CompareTag("awa"))     //O2
         {
             wet = true;
-            print("ahua");  
+            print("ahua");
             //o2 += o2Recov*Time.deltaTime;
         }
 

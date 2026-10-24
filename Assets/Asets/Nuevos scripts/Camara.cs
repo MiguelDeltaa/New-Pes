@@ -2,9 +2,9 @@ using UnityEngine;
 
 public class Camara : MonoBehaviour
 {
-    public Transform target;       
+    public Transform target;        
     public float distance = 4f;
-    public float height = 0.5f;    
+    public float height = 0.5f;      
     public float sensitivity = 3f;
 
     float yaw;
@@ -13,6 +13,11 @@ public class Camara : MonoBehaviour
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
+
+        // mira donde mira el pess
+        Quaternion modelo = Quaternion.Euler(target.GetComponent<PesMovimiento>().rotacionModelo);
+        Vector3 frente = target.rotation * Quaternion.Inverse(modelo) * Vector3.forward;
+        yaw = Mathf.Atan2(frente.x, frente.z) * Mathf.Rad2Deg;
     }
 
     void LateUpdate()
@@ -24,7 +29,7 @@ public class Camara : MonoBehaviour
         Vector3 focus = target.position + Vector3.up * height;
         Vector3 desired = focus - rot * Vector3.forward * distance;
 
-        // si hay Pared acerca cam
+        // si hay una pared en medio acerca la camara
         if (Physics.Linecast(focus, desired, out RaycastHit hit))
             desired = hit.point + hit.normal * 0.2f;
 
