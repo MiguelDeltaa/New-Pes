@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using TMPro;
 
 public class PesMovimiento : MonoBehaviour
 {
@@ -13,24 +12,32 @@ public class PesMovimiento : MonoBehaviour
     public float flopInterval = 0.4f;
     public float turnSpeed = 5f;
 
+    // Salto mas responsivo
+    public float tiempoSuelo = 0.15f;   // Tiempo extra para saltar despues de dejar el suelo
+    public float tiempoBuffer = 0.15f;  // Tiempo que se "recuerda" el espacio pulsado antes de tocar suelo
+    float sueloTimer;
+    float saltoTimer;
+
     Rigidbody rb;
     Vector3 input;
     float flopTimer;
-    bool jumpPressed;
-    bool grounded;   
+    bool grounded;   // Se activa al tocar un suelo, sin importar como este girado el pez
 
-    public float o2 = 100f;
-    public float o2Bleed = 2f;
-    public float o2Recov = 5f;
-    public TMP_Text o2Texto;          
-    public GameObject pantallaGameOver; 
-    public Camara camara;               
-    bool wet = false;
+    // Oxigeno en burbujas
+    public GameObject[] burbujas;           // Burbujas de la UI, de izquierda a derecha
+    public float tiempoPorBurbuja = 10f;    // Segundos que tarda en reventar una burbuja (fuera del agua)
+    public float tiempoRecuperar = 2f;      // Segundos que tarda en reaparecer una burbuja (dentro del agua)
+    float o2;                               // Se mide en burbujas: 5 burbujas = 5
+    int aguas = 0;                          // Cuantos colliders de agua toca el pez (>0 = esta en el agua)
+
+    public GameObject pantallaGameOver; // Panel de game over (desactivado al inicio)
+    public Camara camara;               // Arrastra aqui la Main Camera (para que deje de girar)
     bool muerto = false;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        o2 = burbujas.Length;   // Empieza con todas las burbujas
         //rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
     }
 
@@ -38,7 +45,11 @@ public class PesMovimiento : MonoBehaviour
     void OnCollisionStay(Collision c)
     {
         foreach (var p in c.contacts)
-            if (p.normal.y > 0.5f) grounded = true;
+            if (p.normal.y > 0.5f)
+            {
+                grounded = true;
+                sueloTimer = tiempoSuelo;   // Reinicia el margen para saltar
+            }
     }
 
     void Update()
@@ -49,12 +60,15 @@ public class PesMovimiento : MonoBehaviour
         input = fwd * Input.GetAxisRaw("Vertical") + right * Input.GetAxisRaw("Horizontal");
         input = Vector3.ClampMagnitude(input, 1f);
 
-        if (Input.GetKeyDown(KeyCode.Space)) jumpPressed = true;
+        if (Input.GetKeyDown(KeyCode.Space)) saltoTimer = tiempoBuffer;   // Recuerda la pulsacion
     }
 
     void FixedUpdate()
     {
-        if (muerto) return;   // no se mueve ni gasta oxigeno
+        if (muerto) return;   // Ya perdio: no se mueve ni gasta oxigeno
+
+        sueloTimer -= Time.fixedDeltaTime;
+        saltoTimer -= Time.fixedDeltaTime;
 
         // movimientooo
         rb.AddForce(input * moveForce, ForceMode.Acceleration);
@@ -77,10 +91,14 @@ public class PesMovimiento : MonoBehaviour
             }
         }
 
-        // salta
-        if (jumpPressed && grounded)
+        // salta (si se pulso hace poco Y estuvo en el suelo hace poco)
+        if (saltoTimer > 0 && sueloTimer > 0)
+        {
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);   // Salto siempre igual de alto
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-        jumpPressed = false;
+            saltoTimer = 0;
+            sueloTimer = 0;   // Evita saltar dos veces seguidas
+        }
 
         // gira
         if (input.sqrMagnitude > 0.01f)
@@ -89,29 +107,31 @@ public class PesMovimiento : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, target, turnSpeed * Time.fixedDeltaTime);
         }
 
-        // oxigeno
-        if (wet) o2 += o2Recov * Time.deltaTime;
-        else o2 -= o2Bleed * Time.deltaTime;
+        // oxigeno: fuera del agua revienta una burbuja cada tiempoPorBurbuja, dentro reaparecen
+        if (aguas > 0) o2 += Time.fixedDeltaTime / tiempoRecuperar;
+        else o2 -= Time.fixedDeltaTime / tiempoPorBurbuja;
 
-        o2 = Mathf.Clamp(o2, 0f, 100f);
+        o2 = Mathf.Clamp(o2, 0f, burbujas.Length);
 
-        if (o2Texto != null) o2Texto.text = "O2: " + Mathf.CeilToInt(o2);
+        // Cada burbuja se ve solo si el oxigeno es mayor que su posicion (0, 1, 2...)
+        for (int i = 0; i < burbujas.Length; i++)
+            burbujas[i].SetActive(o2 > i);
 
         if (o2 <= 0) GameOver();
 
-        grounded = false;   
+        grounded = false;   // Se vuelve a calcular en el siguiente paso de fisica
     }
 
     void GameOver()
     {
-        if (muerto) return;  
+        if (muerto) return;   // Evita activarlo dos veces
         muerto = true;
         pantallaGameOver.SetActive(true);
         if (camara != null) camara.enabled = false;
-        Cursor.lockState = CursorLockMode.None;  
+        Cursor.lockState = CursorLockMode.None;   // Liberar el mouse para el boton
     }
 
-    // Reintentar
+    // Para el boton "Reintentar"
     public void Reiniciar()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
@@ -120,29 +140,23 @@ public class PesMovimiento : MonoBehaviour
     //peligros
     private void OnTriggerEnter(Collider collision)
     {
-
         if (collision.gameObject.CompareTag("peligro"))
         {
-
             GameOver();
-
         }
         if (collision.gameObject.CompareTag("awa"))     //O2
         {
-            wet = true;
-            print("ahua");
-            //o2 += o2Recov*Time.deltaTime;
+            aguas++;   // Se cuenta cada collider de agua, asi no se pierde el estado si hay varios
+            print("ahua " + aguas);
         }
-
     }
 
     void OnTriggerExit(Collider collision)
     {
         if (collision.gameObject.CompareTag("awa"))
         {
-            print("aire");
-            wet = false;
-            //o2 -= o2Bleed * Time.deltaTime;
+            aguas = Mathf.Max(0, aguas - 1);
+            print("aire " + aguas);
         }
     }
 }
