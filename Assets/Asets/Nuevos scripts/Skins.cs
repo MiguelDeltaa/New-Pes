@@ -2,19 +2,19 @@ using UnityEngine;
 
 public class Skins : MonoBehaviour
 {
-    public GameObject[] modelos;   // Los 3 modelos del pez
+    public GameObject[] modelos;
 
     void Start()
     {
-        Elegir(PlayerPrefs.GetInt("skin", 0));   // Carga la skin guardada
+        Elegir(PlayerPrefs.GetInt("skin", 0));
     }
 
     public void Elegir(int i)
     {
         for (int j = 0; j < modelos.Length; j++)
-            modelos[j].SetActive(j == i);        // Solo el elegido queda visible
+            modelos[j].SetActive(j == i); 
 
-        PlayerPrefs.SetInt("skin", i);           // Lo guarda
+        PlayerPrefs.SetInt("skin", i);
     }
     void Update()
     {
